@@ -40,7 +40,7 @@ library(knitr)
 
 #### {.outline }
 ```{r, echo = FALSE, out.width = "800 px"}
-knitr::include_graphics(here::here("img", "mainplot.png"))
+knitr::include_graphics(here::here("img", "flu_GUI.png"))
 ```
 
 ####
@@ -72,6 +72,13 @@ This case study is part of a series of public health case studies for the [Bloom
 # **Motivation**
 *** 
 
+## Preventing Influenza Outbreaks
+
+Influenza, more commonly known as the flu, is a contagious respiratory illness caused by viruses which in the 2018-19 flu season, infected 37.4 to 42.9 million people in the United States alone. Of those, 431 to 647 thousand were hospitalized and 36,400 to 61,200 (most of them elderly and children) succumbed to the disease.
+
+At the time of this writing, the best known defense against influenza is vaccination. However, due to the annual mutation of the very many strands of the flu virus, new vaccines must be administered every flu season. Hence, the prediction of the rate of growth in reported infection cases of each strand of the flu is paramount to ensuring the correct supply of vaccines per strand.
+
+An accurate prediction model is essential for pharmaceutical companies and healthcare providers to be able to properly prepare for an upcoming flu season. Vaccine manufacturers in the US can rely on seasonal influenza data provided by the CDC, but, due to the method the CDC collects its data, there is a two-week reporting lag. This lag leaves the vaccine manufacturers a limited amount of time to produce enough flu vaccines for the appropriate flu strains. Thus, an accurate forecast model would provide several benefits to these organizations.
 
 ## **Content Header**
 *** 
@@ -120,40 +127,29 @@ Yanosky, J. D. et al. Spatio-temporal modeling of particulate air pollution in t
 #### {.main_question_block}
 <b><u> Our main question: </u></b>
 
-1) Question 1  
-2) Question 2 etc.
+1) Do previous influenza outbreaks inform us about future ones?
+2) Can Google search trends be used to predict influenza outbreaks?
+3) By focusing on outbreaks in specially selected sub-regions can we gain knowledge about the future of the outbreak in a larger region?
 
 ####
 
 # **Learning Objectives** 
 *** 
 
-In this case study, we will explore CO2 emission data from around the world. 
-We will also focus on the US specifically to evaluate patterns of temperatures and natural disaster activity. 
-
-This case study will particularly focus on how to use different datasets that span different ranges of time, as well as how to create visualizations of patterns over time. 
-We will especially focus on using packages and functions from the [`tidyverse`](https://www.tidyverse.org/){target="_blank"}, such as `dplyr`, `tidyr`, and `ggplot2`. 
-
-The tidyverse is a library of packages created by RStudio. 
-While some students may be familiar with previous R programming packages, these packages make data science in R especially legible and intuitive.
+In this case study we will examine recent influenza outbreaks in the United States as well as Google search patterns during that time period. Using this data we will focus on producing forecasts of future influenza outbreaks in the United States as a whole.
 
 The skills, methods, and concepts that students will be familiar with by the end of this case study are:
 
 <u>**Data Science Learning Objectives:**</u>  
 
 1. Importing data from various types of Excel files and CSV files
-2. Apply action verbs in `dplyr` for data wrangling
-3. How to pivot between "long" and "wide" datasets
-4. Joining together multiple datasets using `dplyr`
-5. How to create effective longitudinal data visualizations with `ggplot2`
-6. How to add text, color, and labels to `ggplot2` plots
-7. How to create faceted `ggplot2` plots
+2. Create Machine Learning algorithms using R
+3. Gain knowledge of how to use LSTMs for time series forecasting
+4. Experiment with data selection and observe how features provided increase or decrease the model's accuracy.
 
 <u>**Statistical Learning Objectives:**</u>  
 
-1. Introduction to correlation coefficient as a summary statistic
-2. Relationship between correlation and linear regression
-3. Correlation is not causation
+1. ...
 
 ```{r, out.width = "20%", echo = FALSE, fig.align = "center"}
 include_graphics("https://tidyverse.tidyverse.org/logo.png")
@@ -183,18 +179,26 @@ The first time we use a function, we will use the `::` to indicate which package
 
 # **Context**
 *** 
+There are several existing works related to influenza prediction. Google Flu Trends for instance, provided a forecast on influenza activities with a linear model but is no longer publishing current estimates based on search patterns.
+
+This research was conducted prior to the COVID-19 pandemic which drastically changed human behavior with regards to disease spread.
 
 # **Limitations**
 *** 
 There are some important considerations regarding this data analysis to keep in mind: 
 
-1) Limitation 1  
+1) Google Trends weekly data is limited to a shifting 5-year window and our first data was downloaded on March 2, 2019, our earliest data downloaded dates to March 2, 2014.
 
-2) Limitaiton 2  
+2) Due to the data collection process, WHO and CDC numbers on flu cases are always two weeks behind the current date.
 
 
 # **What are the data?**
 *** 
+To obtain data from the CDC, the FluView portal on the CDC website was used to download the weekly United States Flu Season Data from the 1st week of 1997 to the 10th week of 2020 broken down on a state by state basis. The data provided consists of the number of influenza-like illnesses cases reported to the CDC. This number is not the total number of influenza cases as some other illness with similar symptoms may be collected into the category, but it is sufficient for our study as it captures the rise and fall of the flu season. 
+
+The key search phrases obtained from Google were specifically chosen to consist of a mix of flu symptoms that would likely be searched prior to a patient choosing to visit a doctor, and more flu-specific key phrases that would counterbalance the noise in the symptom data as such symptoms are not exclusive to cases of influenza. The key phrases selected in English were 'flu', 'sore throat', 'cough', and 'tamiflu'.
+
+The data from the WHO consists of the total number of recorded positive viral samples provided to WHO National Laboratories. While this data can be further broken down into viral subtypes of influenza, a specific flu outbreak will generally be of a different subtype than previous seasons. Thus in order to obtain a general view of influenza cases all seasons, the total number of viral samples was used. It should be noted that the number of viral samples are significantly lower than the influenza-like illness records that the CDC uses, making this dataset potentially less representative and prone to error from noise.
 
 If you want to make a table about variable info:
 
@@ -214,6 +218,11 @@ pm <-readr::read_csv(here("docs", "pm25_data.csv"))
 
 # **Data Exploration and Wrangling**
 *** 
+Data extraction for ILI and Google Trends data have been automated using various Python libraries and techniques. For influenza data, we utilize selenium as a web crawler to extract data from the CDC for the United States on a national and regional level and from WHO for international countries. For COVID data, we clone a GitHub repository kept active by the New York Times which updates the CDC reported number of cases for COVID-19 on a daily basis. This reports national and regional case numbers for the United States.
+
+Google Trends data acquisition is automated using a publicly available, unofficial API for Google Trends, which allows for scraping of data in different locations, time frames, search terms, and languages. Further automation has also been implemented to dynamically translate our search terms into a country’s primary language using a publicly available Google Trends API.
+
+Pre-processing is performed on these datasets by extracting and appending the number of influenza like illness (ILI) cases and the continuous Google Trends data. Any NaN values extracted for ILI cases are assumed to be zero due to a lack of reporting. We do a 75/25 split of training and testing data, along with an offset of n weeks, with n being the number of weeks we are predicting ahead.
 
 We will also use the `%>%` pipe which can be used to define the input for later sequential steps. This will make more sense when we have multiple sequential steps using the same data object. To use the pipe notation we need to install and load dplyr as well.
 
@@ -267,9 +276,25 @@ pm %>%
 # **Data Visualization**
 *** 
 
+# **Graphical User Interface (GUI)**
+***
+```{r, echo = FALSE, out.width="800px"}
+knitr::include_graphics(here::here("img","flu_GUI.png"))
+```
+
+Our team has developed two functional graphical user interfaces: one in MATLAB, which is where our highly functional code is in, and one in R in order to provide an open-source and educational module (want to provide an installation instruction link in a GitHub repository rather than talking about it here).
+
+The features of our user interface include the ability to choose the number of weeks (limited to 3, 7, and 14 for influenza and 1 and 2 for COVID), the illness (Influenza or COVID) they would like to predict ahead by, prediction level (National or State), and the option to make a prediction using the granulation methods mentioned previously. 
+
+Once these options have been configured, the user is able to make a prediction, which sets off the automated series of data scraping and pre-processing events mentioned in the previous sections. After the prediction has completed, the graph of the number of predicted cases over the duration of time within the test data is displayed, along with an accuracy rate to gauge how well the model performed. In addition, we have implemented 95% confidence intervals in order to provide a more accurate range of data for what the actual data likely is. The user can download a spreadsheet of the outputted predictions in .xlsx or .csv format and save an image of the graph.
 
 # **Data Analysis**
 *** 
+As can be seen with the tools above, in general adding more keywords to the model causes the accuracy of the prediction to increase. This is because these keywords possess information within their patterns with the other keywords that the model can use in order to better predict future changes to the number of influenza cases. Keywords that do not possess information will instead provide no benefit or even cause the model's accuracy to drop due to the introduction of noise to the dataset. 
+
+The difference in quality between the WHO and CDC data can also be noted, with the small numbers of cases in the WHO dataset resulting in a less representative view of the influenza season. This less representative view, as a result, will have less patterns shared between it and the keyword search numbers, which will reduce the accuracy of any model using it. 
+
+Furthermore the predictions can be improved by adding state level predictions in order to enhance national predictions and utilizing metropolitan area keyword trends to improve both state level and national predictions. This is because certain states tend to exist on the frontline of an epidemic outbreak due to their population or the number of people entering from abroad. The best forecasts made with eVision at 3, 7, and 14 weeks in advance were results 90.38%, 91.43%, and 81.74% respectively.
 
 ## **content header**
 *** 
